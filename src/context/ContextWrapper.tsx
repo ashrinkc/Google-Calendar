@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useState } from "react";
 import GlobalContext from "./GlobalContext";
 import dayjs from "dayjs";
 
@@ -30,6 +30,7 @@ const ContextWrapper = (props: any) => {
   const [daySelected, setDaySelected] = useState<any>(dayjs());
   const [showEventModal, setShowEventModal] = useState<any>(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [labels, setLabels] = useState<any>([]);
   const [savedEvents, dispatchCalEvents] = useReducer(
     savedEventsReducer,
     [],
@@ -39,11 +40,48 @@ const ContextWrapper = (props: any) => {
   useEffect(() => {
     localStorage.setItem("savedEvents", JSON.stringify(savedEvents));
   }, [savedEvents]);
+
+  useEffect(() => {
+    setLabels((prevLabels: any) => {
+      return [...new Set(savedEvents.map((evt: any) => evt.label))].map(
+        (label: any) => {
+          const currentLabel = prevLabels.find(
+            (lbl: any) => lbl.label === label
+          );
+          return {
+            label,
+            checked: currentLabel ? currentLabel.checked : true,
+          };
+        }
+      );
+    });
+  }, [savedEvents]);
+
   useEffect(() => {
     if (smallCalenddarMonth !== null) {
       setMonthIndex(smallCalenddarMonth);
     }
   }, [smallCalenddarMonth]);
+
+  useEffect(() => {
+    if (!showEventModal) {
+      setSelectedEvent(null);
+    }
+  }, [showEventModal]);
+  function updateLabel(label: any) {
+    setLabels(
+      labels.map((lbl: any) => (lbl.label === label.label ? label : lbl))
+    );
+  }
+
+  const filteredEvents = useMemo(() => {
+    return savedEvents.filter((evt: any) =>
+      labels
+        .filter((lbl: any) => lbl.checked)
+        .map((lbl: any) => lbl.label)
+        .includes(evt.label)
+    );
+  }, [savedEvents, labels]);
   return (
     <GlobalContext.Provider
       value={{
@@ -59,6 +97,10 @@ const ContextWrapper = (props: any) => {
         savedEvents,
         selectedEvent,
         setSelectedEvent,
+        setLabels,
+        labels,
+        updateLabel,
+        filteredEvents,
       }}
     >
       {props.children}
